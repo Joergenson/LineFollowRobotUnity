@@ -1,15 +1,16 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using TMPro;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
-using UnityEngine.UI;
 
-public class UDPManager : MonoBehaviour
+public class UDPManagerOLD : MonoBehaviour
 {
     // Static variable that holds the instance
-    public static UDPManager Instance { get; private set; }
+    public static UDPManagerOLD Instance { get; private set; }
 
     // UDP Settings
     [Header("UDP Settings")]
@@ -17,28 +18,12 @@ public class UDPManager : MonoBehaviour
     [SerializeField] private bool displayUDPMessages = false;
     private UdpClient udpClient;
     private IPEndPoint endPoint;
-    private string _ip = "192.168.87.56";
-    private float _startTime;
-    private int _count;
-    private float _speed;
-    private int _value;
-    private float _endTime;
-    private bool _toggleStop;
-    
-    [SerializeField]private TMP_InputField _leftSensorThreshold;
-    [SerializeField]private TMP_InputField _rightSensorThreshold;
-    [SerializeField]private Button _calibrateThresholdLeft;
-    [SerializeField]private Button _calibrateThresholdRight;
-    
-    private Controller _controller;
-    
 
     // ESP32 Sensor
     public int potentiometerValue { get; private set; } = 0; 
 
     void Awake()
     {
-        _controller = GetComponent<Controller>();
         // Assign the instance to this instance, if it is the first one
         if (Instance == null)
         {
@@ -48,31 +33,6 @@ public class UDPManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        
-        _leftSensorThreshold.onEndEdit.AddListener(OnLeftThresholdChanged);
-        _rightSensorThreshold.onEndEdit.AddListener(OnRightThresholdChanged);
-        _calibrateThresholdLeft.onClick.AddListener(OnCalibrateThresholdLeft);
-        _calibrateThresholdRight.onClick.AddListener(OnCalibrateThresholdRight);
-    }
-
-    private void OnCalibrateThresholdRight()
-    {
-        SendUDPMessage("Unity|" + 10, _ip, 3002);
-    }
-
-    private void OnCalibrateThresholdLeft()
-    {
-        SendUDPMessage("Unity|" + 11, _ip, 3002);
-    }
-
-    private void OnRightThresholdChanged(string arg0)
-    {
-        SendUDPMessage("TresR|" + _rightSensorThreshold.text, _ip, 3002);
-    }
-
-    private void OnLeftThresholdChanged(string arg0)
-    {
-        SendUDPMessage("TresL|" + _leftSensorThreshold.text, _ip, 3002);
     }
 
     // Start is called before the first frame update
@@ -90,10 +50,14 @@ public class UDPManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            SendUDPMessage("Unity|" + (_toggleStop ? 1 : 0), _ip, 3002);
-            _toggleStop = !_toggleStop;
+            SendUDPMessage("LED|1", "10.126.128.155", 3002);
+        }
+
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            SendUDPMessage("LED|0", "10.126.128.155", 3002);
         }
     }
 
@@ -109,34 +73,25 @@ public class UDPManager : MonoBehaviour
         }
 
         // Splitting the receivedData string by the '|' character
-        
+        string[] parts = receivedData.Split('|');
 
-        //
-        if (receivedData.Contains("|"))
+        if (parts.Length == 2) 
         {
-            string[] data = receivedData.Split('|');
-            
-            int.TryParse(data[1], out int value2);
-            
-            if (data[0] == "leftS")
+            string sensorID = parts[0];
+            int value;
+            if (int.TryParse(parts[1], out value))
             {
-                Debug.Log("Left Sensor: " + value2);
-            }
-            else if (data[0] == "rightS")
-            {
-                Debug.Log("Right Sensor: " + value2);
+                potentiometerValue = value;
             }
             else
             {
-                int.TryParse(data[0], out int value);
-                Debug.Log("RPM: " + value +" : " + value2);
-                _controller.LeftWheelRPM = value;
-                _controller.RightWheelRPM = value2;
+                Debug.LogError("Failed to parse the value as an integer.");
             }
         }
-
-
-        // _value = value;
+        else
+        {
+            Debug.LogError("Received data is not in the expected format.");
+        }
 
         udpClient.BeginReceive(ReceiveCallback, null);
     }
@@ -181,14 +136,6 @@ public class UDPManager : MonoBehaviour
         catch (System.Exception ex)
         {
             Debug.LogError("Error fetching local IP address: " + ex.Message);
-        }
-    }
-    
-    private void OnDestroy()
-    {
-        if (udpClient != null)
-        {
-            udpClient.Close();
         }
     }
 }

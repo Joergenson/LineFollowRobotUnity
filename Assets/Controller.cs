@@ -12,7 +12,7 @@ public class Controller : MonoBehaviour
     public float wheelSeparation = 0.131f; // Distance between the left and right wheels
     public float speedMultiplier = 0.1f; // Multiplier to adjust the movement speed
 
-    [Range(100, 255)] public float LeftWheelRPM, RightWheelRPM;
+    [Range(0, 255)] public float LeftWheelRPM, RightWheelRPM;
     
     public TMP_Text leftRPMText;
     public TMP_Text rightRPMText;
