@@ -12,8 +12,9 @@ public class UDPManager : MonoBehaviour
     public static UDPManager Instance { get; private set; }
 
     // UDP Settings
-    [Header("UDP Settings")]
-    [SerializeField] private int UDPPort = 50195;
+    [Header("UDP Settings")] [SerializeField]
+    private int UDPPort = 50195;
+
     [SerializeField] private bool displayUDPMessages = false;
     private UdpClient udpClient;
     private IPEndPoint endPoint;
@@ -24,17 +25,17 @@ public class UDPManager : MonoBehaviour
     private int _value;
     private float _endTime;
     private bool _toggleStop;
-    
-    [SerializeField]private TMP_InputField _leftSensorThreshold;
-    [SerializeField]private TMP_InputField _rightSensorThreshold;
-    [SerializeField]private Button _calibrateThresholdLeft;
-    [SerializeField]private Button _calibrateThresholdRight;
-    
+
+    [SerializeField] private TMP_InputField _leftSensorThreshold;
+    [SerializeField] private TMP_InputField _rightSensorThreshold;
+    [SerializeField] private Button _calibrateThresholdLeft;
+    [SerializeField] private Button _calibrateThresholdRight;
+
     private Controller _controller;
-    
+
 
     // ESP32 Sensor
-    public int potentiometerValue { get; private set; } = 0; 
+    public int potentiometerValue { get; private set; } = 0;
 
     void Awake()
     {
@@ -48,7 +49,7 @@ public class UDPManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        
+
         _leftSensorThreshold.onEndEdit.AddListener(OnLeftThresholdChanged);
         _rightSensorThreshold.onEndEdit.AddListener(OnRightThresholdChanged);
         _calibrateThresholdLeft.onClick.AddListener(OnCalibrateThresholdLeft);
@@ -94,6 +95,7 @@ public class UDPManager : MonoBehaviour
         {
             SendUDPMessage("Unity|" + (_toggleStop ? 1 : 0), _ip, 3002);
             _toggleStop = !_toggleStop;
+            _controller.ResetPos();
         }
     }
 
@@ -109,15 +111,15 @@ public class UDPManager : MonoBehaviour
         }
 
         // Splitting the receivedData string by the '|' character
-        
+
 
         //
         if (receivedData.Contains("|"))
         {
             string[] data = receivedData.Split('|');
-            
+
             int.TryParse(data[1], out int value2);
-            
+
             if (data[0] == "leftS")
             {
                 Debug.Log("Left Sensor: " + value2);
@@ -129,9 +131,21 @@ public class UDPManager : MonoBehaviour
             else
             {
                 int.TryParse(data[0], out int value);
-                Debug.Log("RPM: " + value +" : " + value2);
-                _controller.LeftWheelRPM = value;
-                _controller.RightWheelRPM = value2;
+                if (value > 0 || value2 > 0)
+                {
+                    Debug.Log("RPM: " + value + " : " + value2);
+                }
+
+                try
+                {
+                    _controller.UpdateMovement(value,value2);
+                }
+                catch (Exception e)
+                {
+                    Debug.Log("Error: " + e.Message);
+                    throw;
+                }
+               
             }
         }
 
@@ -183,7 +197,7 @@ public class UDPManager : MonoBehaviour
             Debug.LogError("Error fetching local IP address: " + ex.Message);
         }
     }
-    
+
     private void OnDestroy()
     {
         if (udpClient != null)
