@@ -4,12 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class Controller : MonoBehaviour
 {
     public float maxRPM = 255f; // Maximum RPM of the wheels
-    public Transform leftWheel;
-    public Transform rightWheel;
     public float wheelSeparation = 0.131f; // Distance between the left and right wheels
     public float speedMultiplier = 0.1f; // Multiplier to adjust the movement speed
 
@@ -22,13 +21,11 @@ public class Controller : MonoBehaviour
     public TMP_Text linearVelText;
     public TMP_Text angularVelText;
     
-    public GameObject sphere;
     private Vector3 _lastPosLeft;
-    public Transform _sphereParent;
     private float _time;
     private Vector3 _oldPosLeft;
     private List<Vector3> _pointListMiddle = new List<Vector3>();
-    public LineRenderer ln,ln2,ln3;
+    public LineRenderer line;
     private float _robotAngle;
     private Vector3 _robotPosition;
     private bool _firstMessage = true;
@@ -47,77 +44,20 @@ public class Controller : MonoBehaviour
 
     void Update()
     {
-        // // Example: Get RPM data from the real-life robot (replace with your actual method)
-        // float leftWheelRPM = LeftWheelRPM / 60;
-        // float rightWheelRPM = RightWheelRPM / 60;
-        //
-        // float WheelDia = 65f;
-        //
-        // float WheelCircumference = Mathf.PI * (WheelDia*0.001f);
-        //
-        // float LeftLinearVel = (leftWheelRPM * WheelCircumference);
-        // float RightLinearVel = (rightWheelRPM * WheelCircumference);
-        //
-        // // float leftLinearVel = (2f* Mathf.PI * (26f/2) * (leftWheelRPM / 60))/1000;
-        // // float rightLinearVel = (2f* Mathf.PI * (26f/2) * (rightWheelRPM / 60))/1000;
-        // //
-        // float linearVel = (LeftLinearVel + RightLinearVel) / 2;
-        // float angularVel = (LeftLinearVel - RightLinearVel) / wheelSeparation;
-        // //
-        // // // Move the object forward based on the average linear velocity
-        // transform.Translate(Vector3.forward * linearVel * Time.deltaTime * speedMultiplier);
-        // //
-        // // // Rotate the object based on angular velocity for turning
-        // transform.Rotate(Vector3.up, angularVel * Time.deltaTime * Mathf.Rad2Deg);
-        // //
-        // // // Display the RPM values on the screen
-        // leftRPMText.text =  "Left RPM:   " + leftWheelRPM;
-        // rightRPMText.text = "Right RPM: " + rightWheelRPM;
-        // //
-        // // // Display the linear velocity values on the screen
-        // leftLinearVelText.text =  "Left Linear Vel:   " + LeftLinearVel + " m/s";
-        // rightLinearVelText.text = "Right Linear Vel: " + RightLinearVel + " m/s";
-        // //
-        // // // Display the linear velocity values on the screen
-        // linearVelText.text =  "Linear Vel:   " + linearVel + " m/s";
-        // angularVelText.text = "Angular Vel: " + angularVel * Mathf.Rad2Deg + " deg/s";
-
-
-        // // Convert RPM to angular velocity (degrees per second)
-        // float leftAngularVelocity = leftWheelRPM / 60f * 360f;
-        // float rightAngularVelocity = rightWheelRPM / 60f * 360f;
-        //
-        // // Calculate linear velocity of the robot
-        // float linearVelocity = (leftAngularVelocity + rightAngularVelocity) * Mathf.PI * wheelSeparation / 360f;
-        //
-        // // Move the robot based on linear velocity
-        // transform.Translate(transform.forward * linearVelocity * speedMultiplier * Time.deltaTime, Space.World);
-
-        // // Rotate the wheels based on RPM
-        // RotateWheel(leftWheel, leftAngularVelocity);
-        // RotateWheel(rightWheel, rightAngularVelocity);
-        
-        // Instantiate sphere every 0.25 m travelled
-        // if (Vector3.Distance(_lastPos, transform.position) > 0.5f*0.1f)
-        // {
-        //     var position = transform.position;
-        //     // instantiate sphere with position and rotation of the robot
-        //     Instantiate(sphere, position, transform.rotation, _sphereParent);
-        //     
-        //     _lastPos = position;
-        // }
         _time += Time.deltaTime;
         if (_pointsHaveChangeed)
         {
             UpdateLine();
             _pointsHaveChangeed = false;
+            transform.position = _robotPosition;
+            transform.rotation = Quaternion.Euler(0, _robotAngle * Mathf.Rad2Deg, 0);
         }
     }
 
-    private void OnDrawGizmos()
-    {
-        Gizmos.DrawSphere(_oldPosLeft, 0.1f);
-    }
+    // private void OnDrawGizmos()
+    // {
+    //     Gizmos.DrawSphere(_oldPosLeft, 0.1f);
+    // }
 
     public void UpdateMovement(int leftRPM, int rightRPM)
     {
@@ -143,30 +83,23 @@ public class Controller : MonoBehaviour
         _robotPosition += new Vector3(distance * Mathf.Cos(_robotAngle), 0, distance * Mathf.Sin(_robotAngle));
         
         _pointListMiddle.Add(_robotPosition);
-        
-        // new position of left wheel after moving
-        // var movedPos = new Vector3(distance * Mathf.Cos(angle), 0, distance * Mathf.Sin(angle));
-        // var newPos = _oldPos + movedPos;
-        // _pointList.Add(newPos);
-        // _oldPos = newPos;
 
         _time = 0;
         
         _pointsHaveChangeed = true;
+        
+        leftRPMText.text = leftRPM.ToString();
+        rightRPMText.text = rightRPM.ToString();
+        leftLinearVelText.text = (leftRPS * 0.065f * Mathf.PI).ToString();
+        rightLinearVelText.text = (rightRPS * 0.065f * Mathf.PI).ToString();
+        linearVelText.text = ((leftRPS + rightRPS) * 0.065f * Mathf.PI / 2).ToString();
+        angularVelText.text = ((rightRPS - leftRPS) * 0.065f / wheelSeparation).ToString();
     }
 
     private void UpdateLine()
     {
-        // var newLine = _pointListMiddle.Select(point => point + new Vector3(0, 0, (wheelSeparation / 2))).ToList();
-        // ln.positionCount = newLine.Count;
-        // ln.SetPositions(newLine.ToArray());
-        //
-        // var newLine2 = _pointListMiddle.Select(point => point - new Vector3(0, 0, (wheelSeparation / 2))).ToList();
-        // ln2.positionCount = newLine2.Count;
-        // ln2.SetPositions(newLine2.ToArray());
-        
-        ln3.positionCount = _pointListMiddle.Count;
-        ln3.SetPositions(_pointListMiddle.ToArray());
+        line.positionCount = _pointListMiddle.Count;
+        line.SetPositions(_pointListMiddle.ToArray());
         
     }
 }
