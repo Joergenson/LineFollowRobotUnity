@@ -6,16 +6,21 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Manages UDP communication for the Line Follow Robot Twin.
+/// </summary>
 public class UDPManager : MonoBehaviour
 {
     // Static variable that holds the instance
     public static UDPManager Instance { get; private set; }
 
     // UDP Settings
-    [Header("UDP Settings")] [SerializeField]
+    [Header("UDP Settings")]
+    [SerializeField]
     private int UDPPort = 50195;
 
-    [SerializeField] private bool displayUDPMessages = false;
+    [SerializeField]
+    private bool displayUDPMessages = false;
     private UdpClient udpClient;
     private IPEndPoint endPoint;
     private string _ip = "192.168.87.56";
@@ -26,17 +31,23 @@ public class UDPManager : MonoBehaviour
     private float _endTime;
     private bool _toggleStop;
 
-    [SerializeField] private TMP_InputField _leftSensorThreshold;
-    [SerializeField] private TMP_InputField _rightSensorThreshold;
-    [SerializeField] private Button _calibrateThresholdLeft;
-    [SerializeField] private Button _calibrateThresholdRight;
+    [SerializeField]
+    private TMP_InputField _leftSensorThreshold;
+    [SerializeField]
+    private TMP_InputField _rightSensorThreshold;
+    [SerializeField]
+    private Button _calibrateThresholdLeft;
+    [SerializeField]
+    private Button _calibrateThresholdRight;
 
     private Controller _controller;
-
 
     // ESP32 Sensor
     public int potentiometerValue { get; private set; } = 0;
 
+    /// <summary>
+    /// Called when the script instance is being loaded.
+    /// </summary>
     void Awake()
     {
         _controller = GetComponent<Controller>();
@@ -56,27 +67,43 @@ public class UDPManager : MonoBehaviour
         _calibrateThresholdRight.onClick.AddListener(OnCalibrateThresholdRight);
     }
 
+    /// <summary>
+    /// Sends a UDP message to calibrate the right threshold.
+    /// </summary>
     private void OnCalibrateThresholdRight()
     {
         SendUDPMessage("Unity|" + 10, _ip, 3002);
     }
 
+    /// <summary>
+    /// Sends a UDP message to calibrate the left threshold.
+    /// </summary>
     private void OnCalibrateThresholdLeft()
     {
         SendUDPMessage("Unity|" + 11, _ip, 3002);
     }
 
+    /// <summary>
+    /// Called when the right sensor threshold value is changed.
+    /// </summary>
+    /// <param name="arg0">The new threshold value.</param>
     private void OnRightThresholdChanged(string arg0)
     {
         SendUDPMessage("TresR|" + _rightSensorThreshold.text, _ip, 3002);
     }
 
+    /// <summary>
+    /// Called when the left sensor threshold value is changed.
+    /// </summary>
+    /// <param name="arg0">The new threshold value.</param>
     private void OnLeftThresholdChanged(string arg0)
     {
         SendUDPMessage("TresL|" + _leftSensorThreshold.text, _ip, 3002);
     }
 
-    // Start is called before the first frame update
+    /// <summary>
+    /// Called before the first frame update.
+    /// </summary>
     void Start()
     {
         //Get IP Address
@@ -88,7 +115,9 @@ public class UDPManager : MonoBehaviour
         udpClient.BeginReceive(ReceiveCallback, null);
     }
 
-    // Update is called once per frame
+    /// <summary>
+    /// Called once per frame.
+    /// </summary>
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
@@ -99,6 +128,10 @@ public class UDPManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Callback method for receiving UDP messages.
+    /// </summary>
+    /// <param name="result">The result of the asynchronous receive operation.</param>
     private void ReceiveCallback(IAsyncResult result)
     {
         byte[] receivedBytes = udpClient.EndReceive(result, ref endPoint);
@@ -111,7 +144,6 @@ public class UDPManager : MonoBehaviour
         }
 
         // Splitting the receivedData string by the '|' character
-
 
         //
         if (receivedData.Contains("|"))
@@ -138,24 +170,26 @@ public class UDPManager : MonoBehaviour
 
                 try
                 {
-                    _controller.UpdateMovement(value,value2);
+                    _controller.UpdateMovement(value, value2);
                 }
                 catch (Exception e)
                 {
                     Debug.Log("Error: " + e.Message);
                     throw;
                 }
-               
+
             }
         }
-
-
-        // _value = value;
 
         udpClient.BeginReceive(ReceiveCallback, null);
     }
 
-    // Function to send UDP message
+    /// <summary>
+    /// Sends a UDP message to the specified IP address and port.
+    /// </summary>
+    /// <param name="message">The message to send.</param>
+    /// <param name="ipAddress">The IP address to send the message to.</param>
+    /// <param name="port">The port to send the message to.</param>
     public void SendUDPMessage(string message, string ipAddress, int port)
     {
         UdpClient client = new UdpClient();
@@ -178,6 +212,9 @@ public class UDPManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Displays the local IP address.
+    /// </summary>
     void DisplayIPAddress()
     {
         try
@@ -198,6 +235,9 @@ public class UDPManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called when the script is being destroyed.
+    /// </summary>
     private void OnDestroy()
     {
         if (udpClient != null)
